@@ -66,6 +66,11 @@ class Database implements ConnectionInterface
         return $this->getConfig('name');
     }
 
+    public function getDatabaseName()
+    {
+        return $this->db->dbname;
+    }
+
     /**
      * Begin a fluent query against a database table.
      *
@@ -73,11 +78,11 @@ class Database implements ConnectionInterface
      *
      * @return \Illuminate\Database\Query\Builder
      */
-    public function table($table)
+    public function table($table, $as = null)
     {
         $processor = $this->getPostProcessor();
 
-        $table = $this->db->prefix . $table;
+        $table = $this->db->prefix . $table . ( empty($as) ? '' : " as ". $as );
 
         $query = new Builder($this, $this->getQueryGrammar(), $processor);
 
@@ -305,6 +310,11 @@ class Database implements ConnectionInterface
     public function unprepared($query)
     {
         $result = $this->db->query($query);
+
+        // We need to propagate WP errors otherwise we will have
+        // no feedback and just call insert triggers for non inserted rows...
+        if ($this->db->last_error)
+            throw new \Exception($this->db->last_error);
 
         return ($result === false || $this->db->last_error);
     }
